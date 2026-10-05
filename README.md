@@ -31,9 +31,3 @@
 - `src/main/java/com/itheima/demo12306/Service`：业务处理
 - `src/main/java/com/itheima/demo12306/Mapper` 与 `src/main/resources/com/itheima/demo12306/mapper`：MyBatis 数据访问
 - `src/main/resources/templates`：Thymeleaf 页面
-
-## 上传前检查
-
-- 不要提交 `application-local.properties`、`.env`、`node_modules`、`target` 或任何真实用户数据。
-- 数据库脚本只使用脱敏的示例数据；不要导出真实用户账号、手机号、身份证号或密码。
-- 当前自动化测试只有 Spring 容器加载测试，尚未覆盖数据库读写与订票流程。
