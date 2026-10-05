@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<div>
+    <a th:href="@{find_train_list(qry_current_page=${'1'},
+                         qry_page_size=${'5'})}">车票预览</a>
+    <a th:href="@{passenger(qry_current_page=${qry_current_page},
+                         qry_page_size=${qry_page_size})}">乘车人</a>
+    <a th:href="@{order(qry_current_page=${qry_current_page},
+                         qry_page_size=${qry_page_size})}">订单</a>
+    
+</div>
+<form action="/find_train_list">
+<!--    添加隐藏的输入框，用于保存当前页码和页面大小-->
+    <input type="hidden" th:name="qry_current_page" th:value="${qry_current_page}"/>
+    <input type="hidden" th:name="qry_page_size" th:value="${qry_page_size}"/>
+    始发地:
+    <input type = "text" id="start_station" th:name="star_station">
+    <button onclick="swapLocations()">交换</button>
+    目的地:
+    <input type = "text" id="end_station" th:name="end_station">
+    日期:
+    <input type="date" id="departDate" th:name="start_time">
+    <div>
+        <div>
+            <label>车次类型</label>
+            <span>全部</span>
+            <input type="checkbox" name="train_type" value="高铁城际"> GC-高铁城际
+            <input type="checkbox" name="train_type" value="动车"> D-动车
+            <input type="checkbox" name="train_type" value="复兴号"> 复兴号
+        </div>
+        <div>
+            <label>车次席别</label>
+            <span>全部</span>
+            <input type="checkbox" name="seat_type" value="商务座" > 商务座
+            <input type="checkbox" name="seat_type" value="一等座"> 一等座
+            <input type="checkbox" name="seat_type" value="二等座"> 二等座
+            <input type="checkbox" name="seat_type" value="无座"> 无座
+        </div>
+    </div>
+    <button type="submit">查询</button>
+</form>
+
+<table>
+    <tr>
+        <th>车次</th>
+        <th>出发站</th>
+        <th>到达站</th>
+        <th>出发时间</th>
+        <th>到达时间</th>
+        <th>商务座</th>
+        <th>一等座</th>
+        <th>二等座</th>
+        <th>无座</th>
+        <th>详情</th>
+        <th>操作</th>
+    </tr>
+    <tr th:each="train,itemStat:${trainList}">
+        <td th:text="${train.train_id}">车次</td>
+        <td th:text="${train.start_station}">出发站</td>
+        <td th:text="${train.end_station}">到达站</td>
+        <td th:text="${train.start_time}">出发时间</td>
+        <td th:text="${train.end_time}">到达时间</td>
+        <td th:text="${train.bussiness_seat}">商务座余票</td>
+        <td th:text="${train.first_seat}">一等座余票</td>
+        <td th:text="${train.second_seat}">二等座余票</td>
+        <td th:text="${train.no_seat}">无座余票</td>
+        <td th:text="${train.other}">详情</td>
+        <td>
+            <a th:href="@{/book(train_id=${train.train_id},
+                                           qry_current_page=${'1'},
+                                           qry_page_size=${'5'})}"
+               th:text="预订"></a>
+        </td>
+<!--        <td><a href="#" th:href="@{/book(trainId=${train.id})}">预订</a></td>-->
+    </tr>
+</table>
+<p>
+    <a th:href="@{find_train_list(
+                                 qry_current_page=${qry_current_page - 1},
+                                 qry_page_size=${qry_page_size})}" th:text="上一页"></a>
+    <a th:href="@{find_train_list(
+                                 qry_current_page=${qry_current_page + 1},
+                                 qry_page_size=${qry_page_size})}" th:text="下一页"></a>
+</p>
+</body>
+</html>
+<script>
+    //交换两个输入框的值
+    function swapLocations() {
+        const originInput = document.getElementById('start_station');
+        const destinationInput = document.getElementById('end_station');
+        const temp = originInput.value;
+        originInput.value = destinationInput.value;
+        destinationInput.value = temp;
+    }
+</script>

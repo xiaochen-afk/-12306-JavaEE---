@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<div>
+<a th:href="@{find_train_list(qry_current_page=${'1'},
+                         qry_page_size=${'5'})}">车票预览</a>
+<a th:href="@{passenger(qry_current_page=${'1'},
+                         qry_page_size=${'5'})}">乘车人</a>
+ <a th:href="@{order(qry_current_page=${'1'},
+                         qry_page_size=${'5'})}">订单</a>
+</div>
+<form action="/passengers">
+    <label>姓名</label>
+    <input type="hidden" th:name="qry_current_page" th:value="${qry_current_page}"/>
+    <input type="hidden" th:name="qry_page_size" th:value="${qry_page_size}"/>
+    <input type="text" name="name">
+    <input type="submit" value="查询">
+</form>
+<input type="button" value="添加乘车人" onclick="location.href='/addPassenger'"/>
+<table>
+    <tbody>
+    <tr>
+        <td>姓名</td>
+        <td>电话</td>
+        <td>身份证号</td>
+    </tr>
+    <tr th:each="passenger,itemStat:${passengerList}">
+        <td th:text="${passenger.name}"></td>
+        <td th:text="${passenger.telephone}"></td>
+        <td th:text="${passenger.id_card}"></td>
+        <td>
+            <a th:href="@{deletePassenger(id_card=${passenger.id_card},
+                         qry_current_page=${'1'},
+                         qry_page_size=${'5'})}">删除</a>
+        </td>
+    </tr>
+    </tbody>
+</table>
+<input type="hidden" th:name="qry_current_page" th:value="${qry_current_page}"/>
+<input type="hidden" th:name="qry_page_size" th:value="${qry_page_size}"/>
+<p>
+    <a th:href="@{passenger(qry_current_page=${qry_current_page - 1},
+                         qry_page_size=${qry_page_size})}" th:text="上一页"></a>
+    <a th:href="@{passenger(qry_current_page=${qry_current_page + 1},
+                         qry_page_size=${qry_page_size})}" th:text="下一页"></a>
+</p>
+</body>
+</html>

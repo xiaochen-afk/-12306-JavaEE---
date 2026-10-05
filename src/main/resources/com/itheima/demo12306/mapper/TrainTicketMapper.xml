@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.itheima.demo12306.Mapper.TrainTicketMapper">
+
+    <insert id="check_booking" parameterType="map">
+        INSERT INTO orders (
+        train_id,
+        start_station,
+        end_station,
+        start_time,
+        seat_type,
+        passenger_name,
+        id_card,
+        telephone,
+        seat_id
+        ) VALUES
+        <foreach collection="passenger_names" item="passenger_name" index="index" separator=",">
+            (
+            #{train_id},
+            #{start_station},
+            #{end_station},
+            #{start_time},
+            #{seat_type[${index}]},
+            #{passenger_name},
+            #{id_cards[${index}]},
+            #{telephones[${index}]},
+            #{selectedSeats[${index}]}
+            )
+        </foreach>
+    </insert>
+    <update id="update_seat_count" parameterType="map">
+            UPDATE seat_count
+            <set>
+                <foreach collection="seat_type" item="type" separator=",">
+                    <if test="type == '商务座'">
+                        bussiness_seat = bussiness_seat - #{bussiness_seat}
+                    </if>
+                    <if test="type == '一等座'">
+                        first_seat = first_seat - #{first_seat}
+                    </if>
+                    <if test="type == '二等座'">
+                        second_seat = second_seat - #{second_seat}
+                    </if>
+                    <if test="type == '无座'">
+                        no_seat = no_seat - #{no_seat}
+                    </if>
+                </foreach>
+            </set>
+        where train_id = #{train_id}
+    </update>
+    <select id="find_train_list_by_condition" resultType="com.itheima.demo12306.Entity.TrainType">
+        SELECT t.*,s.bussiness_seat,s.first_seat,s.second_seat,s.no_seat FROM train t left join seat_count s
+                                                                         on t.train_id = s.train_id
+        <where>
+            <if test="start_station != null and start_station != ''">
+                AND start_station = #{start_station}
+            </if>
+            <if test="end_station != null and end_station != ''">
+                AND end_station = #{end_station}
+            </if>
+            <if test="start_time != null and start_time != ''">
+                AND DATE(start_time) = DATE(#{start_time})
+            </if>
+            <if test="train_types != null and train_types.length > 0">
+                AND train_type IN
+                <foreach collection="train_types" item="type" open="(" close=")" separator=",">
+                    #{type}
+                </foreach>
+            </if>
+            <if test="seat_types != null and seat_types.length > 0">
+                AND (
+                <foreach collection="seat_types" item="seat" separator=" OR ">
+                    <if test="seat == '商务座'">s.bussiness_seat > 0</if>
+                    <if test="seat == '一等座'">s.first_seat > 0</if>
+                    <if test="seat == '二等座'">s.second_seat > 0</if>
+                    <if test="seat == '无座'">s.no_seat > 0</if>
+                </foreach>
+                )
+            </if>
+<!--            <if test="seat_types != null and seat_types.length > 0">-->
+<!--                AND seat_type IN-->
+<!--                <foreach collection="seat_types" item="seat" open="(" close=")" separator=",">-->
+<!--                    #{seat}-->
+<!--                </foreach>-->
+<!--            </if>-->
+        </where>
+        LIMIT #{pos}, #{qryPageSize}
+    </select>
+</mapper>

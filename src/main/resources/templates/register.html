@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<form action="/check_register" method="post">
+    <p>用户名<input type="text" name="username" placeholder="请输入用户名"></p>
+    <p>密码<input type="password" name="password" placeholder="请输入密码"></p>
+    <p>邮箱<input type="email" name="email" placeholder="请输入邮箱"></p>
+    <p>手机号<input type="text" name="telephone" placeholder="请输入手机号"></p>
+    <input type="submit" value="注册">
+    <a href="/login">已有账号，去登录</a>
+</form>
+</body>
+</html>

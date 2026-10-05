@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<form action="/check_login" method="post">
+    <input type="hidden" th:name="qry_current_page" th:value="1">
+    <input type="hidden" th:name="qry_page_size" th:value="5"/>
+    <p>用户名:<input type="text" maxlength="9" th:name="username"></p>
+    <p>密码:<input type="password" maxlength="16" th:name="password"></p>
+    <p>
+        <input type="submit" value="登录">
+            <a href="/register">注册</a>
+    </p>
+</form>
+</body>
+</html>

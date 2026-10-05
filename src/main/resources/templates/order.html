@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>个人车票查询</title>
+</head>
+<body>
+<h2>个人车票查询</h2>
+<a th:href="@{find_train_list(qry_current_page=${'1'},
+                         qry_page_size=${'5'})}">车票预览</a>
+<a th:href="@{passenger(qry_current_page=${'1'},
+                         qry_page_size=${'5'})}">乘车人</a>
+ <a th:href="@{order(qry_current_page=${'1'},
+                         qry_page_size=${'5'})}">订单</a>
+<!-- 查询表单 -->
+<form id="ticketQueryForm" action="/tickets" method="post">
+    <label for="idCard">请输入身份证号：</label>
+    <input type="text" id="idCard" th:name="id_card">
+    <button type="submit">查询车票</button>
+</form>
+
+<!-- 车票信息展示区域 -->
+<div id="ticketResults" style="display: none;">
+    <h3>车票信息</h3>
+    <table border="1">
+        <thead>
+        <tr>
+            <th>车次</th>
+            <th>始发站</th>
+            <th>到达站</th>
+            <th>发车时间</th>
+            <th>席别</th>
+            <th>座位号</th>
+            <th>乘车人</th>
+            <th>支付状态</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each ="ticket ,itemStat:${tickets}">
+            <td th:text="${ticket.train_id}"></td>
+            <td th:text="${ticket.start_station}"></td>
+            <td th:text="${ticket.end_station}"></td>
+            <td th:text="${ticket.start_time}"></td>
+            <td th:text="${ticket.seat_type}"></td>
+            <td th:text="${ticket.seat_id}"></td>
+            <td th:text="${ticket.passenger_name}"></td>
+            <td th:text="${ticket.status}"></td>
+            <td>
+                <a th:href="@{/cancel(train_id=${ticket.train_id}, start_station=${ticket.start_station}, end_station=${ticket.end_station}, start_time=${ticket.start_time}, seat_type=${ticket.seat_type}, seat_id=${ticket.seat_id}, passenger_name=${ticket.passenger_name}, id_card=${ticket.id_card})}">取消</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+        // 显示结果表格
+        document.getElementById('ticketResults').style.display = 'block';
+</script>
+</body>
+</html>

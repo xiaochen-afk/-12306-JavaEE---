@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.itheima.demo12306.Mapper.SeatMapper">
+
+    <!-- 根据车次ID和座位类型获取座位列表 -->
+    <select id="getSeatsByTrainIdAndType" resultType="com.itheima.demo12306.Entity.Seat">
+        SELECT * FROM seat
+        WHERE train_id = #{train_id} AND seat_type = #{seat_type}
+        ORDER BY seat_no
+    </select>
+    
+    <!-- 更新座位状态 -->
+    <update id="updateSeatStatus">
+        UPDATE seat
+        SET status = #{status}
+        WHERE train_id = #{train_id} AND seat_no = #{seat_no}
+    </update>
+</mapper>

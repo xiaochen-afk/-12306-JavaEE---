@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>火车票预订</title>
+    <style>
+        /* 乘客选择弹窗样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+        .passenger-item {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+        }
+        
+        .passenger-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .passenger-item.selected {
+            background-color: #e0f7fa;
+        }
+        
+        .passenger-item.disabled {
+            background-color: #f5f5f5;
+            color: #999;
+            cursor: not-allowed;
+        }
+        
+        /* 车次信息样式 */
+        .train-info {
+            background-color: #f0f0f0;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        
+        /* 乘车人表格样式 */
+        .passenger-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .passenger-table th,
+        .passenger-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .passenger-table th {
+            background-color: #f2f2f2;
+        }
+        
+        /* 按钮样式 */
+        .btn {
+            padding: 8px 16px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+        }
+        
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background-color: #2196F3;
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+<form action="/confirm_booking" method="post" onsubmit="return validateSelection()">
+    <input type="hidden" th:name="qry_current_page" th:value="1"/>
+    <input type="hidden" th:name="qry_page_size" th:value="5"/>
+    <input type="hidden" id="train_id" th:value="${train_id}"/>
+    <h2>火车票预订</h2>
+    
+    <!-- 错误消息显示 -->
+    <div th:if="${errorMessage != null}" style="color: red; margin: 10px 0;">
+        <strong>错误:</strong> <span th:text="${errorMessage}"></span>
+    </div>
+    
+    <!-- 车次信息 -->
+    <div class="train-info">
+        <table>
+            <tr th:each="train:${trainList}">
+                <td>
+                    <strong>车次:</strong>
+                    <input type="text" name="train_id" th:value="${train.train_id}" readonly style="border: none; background: transparent;">
+                </td>
+                <td>
+                    <strong>出发站:</strong>
+                    <input type="text" name="start_station" th:value="${train.start_station}" readonly style="border: none; background: transparent;">
+                </td>
+                <td>
+                    <strong>到达站:</strong>
+                    <input type="text" name="end_station" th:value="${train.end_station}" readonly style="border: none; background: transparent;">
+                </td>
+                <td>
+                    <strong>出发时间:</strong>
+                    <input type="text" name="start_time" th:value="${train.start_time}" readonly style="border: none; background: transparent;">
+                </td>
+                <td>
+                    <strong>座位类型:</strong>
+                    <select id="seatTypeSelect" name="seat_type_display[]" onchange="updateAllSeatTypes(this.value)">
+                        <option value="商务座">商务座</option>
+                        <option value="一等座">一等座</option>
+                        <option value="二等座">二等座</option>
+                        <option value="无座">无座</option>
+                    </select>
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    <!-- 乘车人信息表格 -->
+    <h3>乘车人信息</h3>
+    <table class="passenger-table">
+        <thead>
+            <tr>
+                <th>姓名</th>
+                <th>身份证号</th>
+                <th>手机号</th>
+                <th>座位类型</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="passengerTableBody">
+            <!-- 乘车人信息行 -->
+            <tr class="passenger-row">
+                <td>
+                    <input type="text" name="passenger_name[]" required placeholder="请输入姓名">
+                </td>
+                <td>
+                    <input type="text" name="id_card[]" required placeholder="请输入身份证号">
+                </td>
+                <td>
+                    <input type="text" name="telephone[]" required placeholder="请输入手机号">
+                </td>
+                <td>
+                    <input type="hidden" name="seat_type[]" value="商务座">
+                    <span class="seat-type-display">商务座</span>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-secondary" onclick="openPassengerModal(this)">选择乘车人</button>
+                    <button type="button" class="btn btn-danger" onclick="deleteRow(this)">删除</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <!-- 选座区域 -->
+    <div id="seatSelection" style="display: none; margin-top: 20px;">
+        <h3>座位选择</h3>
+        <div id="seatContainer" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;"></div>
+        <div id="selectedSeats">已选座位：</div>
+        <input type="hidden" name="selected_seats" id="selectedSeatsInput">
+    </div>
+
+    <!-- 提交按钮 -->
+    <button type="button" class="btn btn-primary" onclick="addPassenger()">添加乘车人</button>
+    <button type="button" class="btn btn-primary" onclick="checkSeatType()">显示选座</button>
+    <button type="submit" class="btn btn-primary">确认预订</button>
+    <input type="button" class="btn btn-danger" value="取消订单" onclick="history.back()"/>
+</form>
+
+<!-- 选择乘车人弹窗 -->
+<div id="passengerModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closePassengerModal()">&times;</span>
+        <h3>选择乘车人</h3>
+        <div id="passengerListContainer">
+            <!-- 乘车人列表将通过JavaScript动态加载 -->
+        </div>
+        <div style="text-align: center; margin-top: 20px;">
+            <button type="button" class="btn btn-primary" onclick="confirmPassengerSelection()">确认选择</button>
+            <button type="button" class="btn btn-secondary" onclick="closePassengerModal()">取消</button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
+<script>
+    // 座位数量配置
+    const seatConfig = {
+        '商务座': 10,
+        '一等座': 30,
+        '二等座': 50
+    };
+    
+    // 已选座位
+    let selectedSeats = [];
+    
+    // 已选乘车人ID列表，用于去重
+    let selectedPassengerIds = new Set();
+    
+    // 当前操作的乘车人输入行
+    let currentOperateRow = null;
+    
+    // 乘车人列表数据
+    let passengerListData = [];
+    
+    // 页面加载完成后初始化
+    window.onload = function() {
+        // 加载乘车人列表
+        loadPassengerList();
+    };
+    
+    // 加载乘车人列表
+    function loadPassengerList() {
+        fetch('/get_all_passengers')
+            .then(response => response.json())
+            .then(data => {
+                passengerListData = data;
+                console.log('乘车人列表数据:', data);
+            })
+            .catch(error => {
+                console.error('加载乘车人列表失败:', error);
+            });
+    }
+    
+    // 打开乘车人选择弹窗
+    function openPassengerModal(button) {
+        // 获取当前操作的行
+        currentOperateRow = button.closest('.passenger-row');
+        
+        // 生成乘车人列表HTML
+        generatePassengerList();
+        
+        // 显示弹窗
+        document.getElementById('passengerModal').style.display = 'block';
+    }
+    
+    // 关闭乘车人选择弹窗
+    function closePassengerModal() {
+        document.getElementById('passengerModal').style.display = 'none';
+        currentOperateRow = null;
+    }
+    
+    // 生成乘车人列表
+    function generatePassengerList() {
+        const container = document.getElementById('passengerListContainer');
+        container.innerHTML = '';
+        
+        passengerListData.forEach(passenger => {
+            const passengerItem = document.createElement('div');
+            passengerItem.className = 'passenger-item';
+            passengerItem.dataset.passengerId = passenger.id_card;
+            passengerItem.dataset.name = passenger.name;
+            passengerItem.dataset.idCard = passenger.id_card;
+            passengerItem.dataset.telephone = passenger.telephone;
+            
+            // 检查是否已被选择
+            if (selectedPassengerIds.has(passenger.id_card)) {
+                // 检查是否是当前行的乘客
+                const currentIdCard = currentOperateRow.querySelector('input[name="id_card[]"]').value;
+                if (passenger.id_card === currentIdCard) {
+                    passengerItem.classList.add('selected');
+                } else {
+                    passengerItem.classList.add('disabled');
+                    passengerItem.onclick = null;
+                }
+            } else {
+                passengerItem.onclick = function() {
+                    // 移除其他选中状态
+                    document.querySelectorAll('.passenger-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                    // 添加当前选中状态
+                    this.classList.add('selected');
+                };
+            }
+            
+            passengerItem.innerHTML = `
+                <strong>${passenger.name}</strong><br>
+                身份证: ${passenger.id_card}<br>
+                手机号: ${passenger.telephone}
+            `;
+            
+            container.appendChild(passengerItem);
+        });
+    }
+    
+    // 确认选择乘车人
+    function confirmPassengerSelection() {
+        // 获取选中的乘车人
+        const selectedItem = document.querySelector('.passenger-item.selected');
+        if (!selectedItem) {
+            alert('请选择一个乘车人');
+            return;
+        }
+        
+        // 获取当前行的身份证号（用于判断是否是修改已选乘车人）
+        const currentIdCard = currentOperateRow.querySelector('input[name="id_card[]"]').value;
+        if (currentIdCard) {
+            // 移除旧的身份证号
+            selectedPassengerIds.delete(currentIdCard);
+        }
+        
+        // 获取选中乘车人的信息
+        const passengerId = selectedItem.dataset.passengerId;
+        const name = selectedItem.dataset.name;
+        const idCard = selectedItem.dataset.idCard;
+        const telephone = selectedItem.dataset.telephone;
+        
+        // 更新当前行的输入框
+        currentOperateRow.querySelector('input[name="passenger_name[]"]').value = name;
+        currentOperateRow.querySelector('input[name="id_card[]"]').value = idCard;
+        currentOperateRow.querySelector('input[name="telephone[]"]').value = telephone;
+        
+        // 添加到已选列表
+        selectedPassengerIds.add(idCard);
+        
+        // 关闭弹窗
+        closePassengerModal();
+    }
+    
+    // 更新所有乘车人的座位类型
+    function updateAllSeatTypes(seatType) {
+        const rows = document.querySelectorAll('.passenger-row');
+        rows.forEach(row => {
+            const seatTypeInput = row.querySelector('input[name="seat_type[]"]');
+            const seatTypeDisplay = row.querySelector('.seat-type-display');
+            seatTypeInput.value = seatType;
+            seatTypeDisplay.textContent = seatType;
+        });
+        
+        // 重新检查座位类型
+        checkSeatType();
+    }
+    
+    // 添加乘车人
+    function addPassenger() {
+        // 获取表格体
+        const tbody = document.getElementById('passengerTableBody');
+        // 获取第一行（模板行）
+        const firstRow = tbody.firstElementChild;
+        // 克隆第一行
+        const newRow = firstRow.cloneNode(true);
+
+        // 清空乘客信息输入框
+        const passengerInputs = newRow.querySelectorAll('[name="passenger_name[]"], [name="id_card[]"],[name="telephone[]"]');
+        passengerInputs.forEach(input => {
+            input.value = '';
+        });
+
+        // 设置新乘车人的座位类型与第一个人一致
+        const firstSeatType = document.querySelector('input[name="seat_type[]"]').value;
+        const seatTypeInput = newRow.querySelector('input[name="seat_type[]"]');
+        const seatTypeDisplay = newRow.querySelector('.seat-type-display');
+        seatTypeInput.value = firstSeatType;
+        seatTypeDisplay.textContent = firstSeatType;
+
+        // 添加到表格中
+        tbody.appendChild(newRow);
+        
+        // 添加乘车人后，如果选座区域已经显示，重新检查座位类型
+        if (document.getElementById('seatSelection').style.display === 'block') {
+            checkSeatType();
+        }
+    }
+
+    // 删除乘车人
+    function deleteRow(button) {
+        // 获取要删除的行
+        const row = button.closest('.passenger-row');
+        
+        // 获取该行的身份证号
+        const idCard = row.querySelector('input[name="id_card[]"]').value;
+        if (idCard) {
+            // 从已选列表中移除
+            selectedPassengerIds.delete(idCard);
+        }
+        
+        // 删除行
+        row.remove();
+        
+        // 重新检查座位选择
+        if (document.getElementById('seatSelection').style.display === 'block') {
+            checkSeatType();
+        }
+    }
+    
+    // 检查所有乘客的座位类型是否一致
+    function checkSeatType() {
+        const hiddenSeatTypes = document.querySelectorAll('input[name="seat_type[]"]');
+        const passengerCount = hiddenSeatTypes.length;
+        
+        if (passengerCount === 0) {
+            alert('请先添加乘车人');
+            return;
+        }
+        
+        // 检查是否所有乘客都选择了座位类型
+        for (let i = 0; i < hiddenSeatTypes.length; i++) {
+            if (!hiddenSeatTypes[i].value) {
+                alert('请为所有乘车人选择座位类型');
+                return;
+            }
+        }
+        
+        // 检查是否所有乘客的座位类型一致
+        const firstSeatType = hiddenSeatTypes[0].value;
+        let allSameType = true;
+        
+        for (let i = 1; i < hiddenSeatTypes.length; i++) {
+            if (hiddenSeatTypes[i].value !== firstSeatType) {
+                allSameType = false;
+                break;
+            }
+        }
+        
+        if (!allSameType) {
+            alert('所有乘车人的座位类型必须一致才能选座');
+            return;
+        }
+        
+        // 如果是无座，不需要选座
+        if (firstSeatType === '无座') {
+            alert('无座不需要选择具体座位');
+            document.getElementById('seatSelection').style.display = 'none';
+            return;
+        }
+        
+        // 保存当前已选座位
+        const currentSelectedSeats = [...selectedSeats];
+        
+        // 生成座位预览
+        generateSeats(firstSeatType, passengerCount);
+        
+        // 显示选座区域
+        document.getElementById('seatSelection').style.display = 'block';
+        
+        // 重新选择之前的座位（但不超过当前乘客数量）
+        setTimeout(() => {
+            const seatButtons = document.querySelectorAll('#seatContainer [data-seat-id]');
+            const maxSeats = passengerCount;
+            let seatsSelected = 0;
+            
+            // 先选择之前的座位
+            for (const seatId of currentSelectedSeats) {
+                if (seatsSelected >= maxSeats) break;
+                
+                const seatButton = document.querySelector(`#seatContainer [data-seat-id="${seatId}"]`);
+                if (seatButton && seatButton.style.backgroundColor !== 'rgb(244, 67, 54)') { // 不是红色（已占用）
+                    seatButton.click();
+                    seatsSelected++;
+                }
+            }
+            
+            // 如果还有剩余座位需要选择，提示用户
+            if (seatsSelected < maxSeats) {
+                alert(`需要为新添加的乘车人选择${maxSeats - seatsSelected}个座位`);
+            }
+        }, 100); // 延迟执行，确保座位已经生成
+    }
+    
+    // 生成座位预览
+    function generateSeats(seatType, passengerCount) {
+        const seatContainer = document.getElementById('seatContainer');
+        const trainId = document.getElementById('train_id').value;
+        
+        // 清空容器
+        seatContainer.innerHTML = '';
+        selectedSeats = [];
+        document.getElementById('selectedSeats').textContent = '已选座位：';
+        document.getElementById('selectedSeatsInput').value = '';
+        
+        // 从数据库获取座位信息
+        fetchSeatStatus(trainId, seatType, function(seatStatusMap) {
+            // 按排分组座位
+            const seatsByRow = {};
+            
+            // 遍历座位状态映射，按排号分组
+            for (const seatNo in seatStatusMap) {
+                // 提取排号（字母部分）
+                const rowLetter = seatNo.replace(/\d+$/, '');
+                if (!seatsByRow[rowLetter]) {
+                    seatsByRow[rowLetter] = [];
+                }
+                seatsByRow[rowLetter].push(seatNo);
+            }
+            
+            // 对排号进行排序
+            const sortedRows = Object.keys(seatsByRow).sort();
+            
+            // 遍历每一排，创建座位
+            sortedRows.forEach(rowLetter => {
+                const rowDiv = document.createElement('div');
+                rowDiv.style.marginBottom = '10px';
+                rowDiv.style.display = 'flex';
+                rowDiv.style.alignItems = 'center';
+                
+                // 行标记
+                const rowLabel = document.createElement('span');
+                rowLabel.textContent = rowLetter + '排：';
+                rowLabel.style.marginRight = '10px';
+                rowLabel.style.width = '40px';
+                rowDiv.appendChild(rowLabel);
+                
+                // 按座位号排序
+                const seatNos = seatsByRow[rowLetter].sort((a, b) => {
+                    const numA = parseInt(a.replace(/[^\d]/g, ''));
+                    const numB = parseInt(b.replace(/[^\d]/g, ''));
+                    return numA - numB;
+                });
+                
+                // 创建座位
+                seatNos.forEach((seatNo, index) => {
+                    const seat = document.createElement('div');
+                    seat.textContent = seatNo;
+                    seat.style.width = '40px';
+                    seat.style.height = '40px';
+                    seat.style.border = '1px solid #000';
+                    seat.style.marginRight = '5px';
+                    seat.style.display = 'flex';
+                    seat.style.alignItems = 'center';
+                    seat.style.justifyContent = 'center';
+                    seat.style.cursor = 'pointer';
+                    seat.dataset.seatId = seatNo;
+                    
+                    // 检查座位状态
+                    const seatStatus = seatStatusMap[seatNo];
+                    if (seatStatus === 'OCCUPIED') {
+                        // 已选座位，禁用并设置样式
+                        seat.style.backgroundColor = '#f44336';
+                        seat.style.color = '#fff';
+                        seat.style.cursor = 'not-allowed';
+                        seat.disabled = true;
+                        // 禁用点击事件
+                        seat.onclick = null;
+                    } else {
+                        // 可选座位
+                        seat.style.backgroundColor = '#e0e0e0';
+                        seat.style.color = '#000';
+                        // 点击事件
+                        seat.onclick = function() {
+                            toggleSeat(this, passengerCount);
+                        };
+                    }
+                    
+                    rowDiv.appendChild(seat);
+                    
+                    // 在左边3个座位和右边2个座位中间添加过道
+                    if (index === 2) {
+                        const aisle = document.createElement('div');
+                        aisle.style.width = '30px'; // 过道宽度
+                        aisle.style.height = '40px';
+                        rowDiv.appendChild(aisle);
+                    }
+                });
+                
+                seatContainer.appendChild(rowDiv);
+            });
+        });
+    }
+    
+    // 从数据库获取座位状态
+    function fetchSeatStatus(trainId, seatType, callback) {
+        const xhr = new XMLHttpRequest();
+        const url = '/get_seats?train_id=' + encodeURIComponent(trainId) + '&seat_type=' + encodeURIComponent(seatType);
+        
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                    try {
+                        const seats = JSON.parse(xhr.responseText);
+                        const seatStatusMap = {};
+                        
+                        // 构建座位状态映射
+                        seats.forEach(seat => {
+                            seatStatusMap[seat.seat_no] = seat.status;
+                        });
+                        
+                        callback(seatStatusMap);
+                    } catch (e) {
+                        console.error('解析座位数据失败:', e);
+                        callback({}); // 空映射，所有座位都可选
+                    }
+                } else {
+                    console.error('获取座位信息失败，状态码:', xhr.status);
+                    callback({}); // 空映射，所有座位都可选
+                }
+            }
+        };
+        
+        xhr.open('GET', url, true);
+        xhr.send();
+    }
+    
+    // 切换座位选择状态
+    function toggleSeat(seat, passengerCount) {
+        const seatId = seat.dataset.seatId;
+        const index = selectedSeats.indexOf(seatId);
+        
+        if (index === -1) {
+            // 选择座位
+            if (selectedSeats.length < passengerCount) {
+                selectedSeats.push(seatId);
+                seat.style.backgroundColor = '#4CAF50';
+                seat.style.color = '#fff';
+            } else {
+                alert(`只能选择${passengerCount}个座位（乘车人数）`);
+            }
+        } else {
+            // 取消选择
+            selectedSeats.splice(index, 1);
+            seat.style.backgroundColor = '#e0e0e0';
+            seat.style.color = '#000';
+        }
+        
+        // 更新已选座位显示
+        updateSelectedSeats();
+    }
+    
+    // 更新已选座位显示
+    function updateSelectedSeats() {
+        const selectedSeatsDiv = document.getElementById('selectedSeats');
+        const selectedSeatsInput = document.getElementById('selectedSeatsInput');
+        
+        if (selectedSeats.length === 0) {
+            selectedSeatsDiv.textContent = '已选座位：';
+            selectedSeatsInput.value = '';
+        } else {
+            selectedSeatsDiv.textContent = '已选座位：' + selectedSeats.join(', ');
+            selectedSeatsInput.value = selectedSeats.join(',');
+        }
+    }
+    
+    // 验证选择
+    function validateSelection() {
+        const hiddenSeatTypes = document.querySelectorAll('input[name="seat_type[]"]');
+        const firstSeatType = hiddenSeatTypes[0].value;
+        
+        // 检查是否至少有一个乘车人
+        if (hiddenSeatTypes.length === 0) {
+            alert('请至少添加一个乘车人');
+            return false;
+        }
+        
+        // 如果不是无座，需要检查是否选择了足够的座位
+        if (firstSeatType !== '无座') {
+            const passengerCount = hiddenSeatTypes.length;
+            if (selectedSeats.length !== passengerCount) {
+                alert(`请选择${passengerCount}个座位`);
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    // 点击模态框外部关闭弹窗
+    window.onclick = function(event) {
+        const modal = document.getElementById('passengerModal');
+        if (event.target === modal) {
+            closePassengerModal();
+        }
+    }
+</script>

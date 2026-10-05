@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.itheima.demo12306.Mapper.OrderMapper">
+
+    <!-- 查询车票列表 -->
+    <select id="list_tickets" resultType="com.itheima.demo12306.Entity.Ticket">
+        SELECT train_id, start_station, end_station, start_time, seat_type, seat_id, passenger_name, status, id_card
+        FROM orders
+        WHERE id_card = #{id_card}
+    </select>
+    
+    <!-- 取消订单 -->
+    <delete id="cancel_ticket">
+        DELETE FROM orders
+        WHERE train_id = #{train_id}
+        AND start_station = #{start_station}
+        AND end_station = #{end_station}
+        AND start_time = #{start_time}
+        AND seat_type = #{seat_type}
+        AND seat_id = #{seat_id}
+        AND passenger_name = #{passenger_name}
+        AND id_card = #{id_card}
+    </delete>
+    
+    <!-- 更新座位状态为可用 -->
+    <update id="update_seat_status">
+        UPDATE seat
+        SET status = #{status}
+        WHERE seat_no = #{seat_id}
+    </update>
+    
+    <!-- 更新座位数量 -->
+    <update id="update_seat_count">
+        UPDATE seat_count
+        <set>
+            <if test="seat_type == '商务座'">
+                bussiness_seat = bussiness_seat + #{count}
+            </if>
+            <if test="seat_type == '一等座'">
+                first_seat = first_seat + #{count}
+            </if>
+            <if test="seat_type == '二等座'">
+                second_seat = second_seat + #{count}
+            </if>
+            <if test="seat_type == '无座'">
+                no_seat = no_seat + #{count}
+            </if>
+        </set>
+        WHERE train_id = #{train_id}
+    </update>
+</mapper>
